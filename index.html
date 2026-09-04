@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VirasaAI — Cultural Discovery Portal</title>
+    
+    <!-- Leaflet CSS for Interactive Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #F8FAFC; color: #1E293B; padding: 20px; }
+        
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        header { text-align: center; margin-bottom: 25px; padding: 15px; background: #FFFFFF; border-radius: 12px; border: 1px solid #CBD5E1; }
+        header h1 { color: #0284C7; font-size: 28px; }
+        header p { color: #64748B; font-size: 14px; }
+        
+        /* Language & Site Bar */
+        .control-bar { display: flex; gap: 15px; background: #E0F2FE; padding: 12px; border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+        .control-group { display: flex; flex-direction: column; flex: 1; min-width: 200px; }
+        .control-group label { font-size: 12px; font-weight: bold; color: #0369A1; margin-bottom: 4px; }
+        .control-group select { padding: 8px; border-radius: 6px; border: 1px solid #CBD5E1; outline: none; font-size: 14px; }
+        
+        /* Tab Navigation */
+        .tabs { display: flex; border-bottom: 2px solid #E2E8F0; margin-bottom: 20px; gap: 10px; overflow-x: auto; }
+        .tab-btn { padding: 10px 18px; border: none; background: none; font-size: 14px; font-weight: bold; color: #64748B; cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: #0284C7; border-bottom-color: #0284C7; }
+        
+        /* Content Sections */
+        .tab-content { display: none; background: #FFFFFF; padding: 20px; border-radius: 10px; border: 1px solid #E2E8F0; }
+        .tab-content.active { display: block; }
+        
+        /* Map Container */
+        #map { height: 350px; width: 100%; border-radius: 8px; border: 1px solid #CBD5E1; }
+        
+        /* Time Slider Card */
+        .visualizer { text-align: center; }
+        .image-container { position: relative; width: 100%; max-height: 350px; overflow: hidden; border-radius: 8px; margin-top: 15px; }
+        .image-container img { width: 100%; height: auto; border-radius: 8px; display: block; }
+        .slider-control { margin-top: 15px; width: 100%; }
+        
+        /* Grid Layouts */
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
+        .card { background: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #0284C7; padding: 15px; border-radius: 8px; }
+        .card h4 { color: #0F172A; margin-bottom: 8px; }
+        .card p, .card li { font-size: 13px; color: #475569; line-height: 1.5; }
+        
+        /* Button Styling */
+        .btn { background: #0284C7; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 13px; }
+        .btn:hover { background: #0369A1; }
+        
+        .route-step { background: #DCFCE7; border-left-color: #16A34A; padding: 10px; border-radius: 6px; font-size: 13px; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>🏛️ VirasaAI</h1>
+        <p>Interactive Heritage Preservation & Cultural Discovery Engine</p>
+    </header>
+    
+    <!-- Language & Location Controls -->
+    <div class="control-bar">
+        <div class="control-group">
+            <label for="siteSelect">📍 Select Heritage Site:</label>
+            <select id="siteSelect" onchange="updateSiteData()">
+                <option value="bishnupur">Bishnupur Terracotta Temples</option>
+                <option value="hazarduari">Hazarduari Palace, Murshidabad</option>
+                <option value="konark">Konark Sun Temple, Odisha</option>
+                <option value="darjeeling">Darjeeling Himalayan Railway</option>
+                <option value="victoria">Victoria Memorial, Kolkata</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="langSelect">🌐 Audio & Narrative Language:</label>
+            <select id="langSelect" onchange="updateSiteData()">
+                <option value="en-US">English</option>
+                <option value="bn-IN">Bengali (বাংলা)</option>
+                <option value="hi-IN">Hindi (हिंदी)</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab(event, 'mapTab')">🗺️ GPS Map Scanner</button>
+        <button class="tab-btn" onclick="switchTab(event, 'historyTab')">🏛️ History & Past</button>
+        <button class="tab-btn" onclick="switchTab(event, 'audioTab')">🗣️ Audio Stories</button>
+        <button class="tab-btn" onclick="switchTab(event, 'cultureTab')">🎨 Artisans & Food</button>
+    </div>
+    
+    <!-- TAB 1: GPS MAP SCANNER -->
+    <div id="mapTab" class="tab-content active">
+        <h3>📍 Interactive Map & Radar Scanning</h3>
+        <p style="font-size: 13px; color: #64748B; margin-bottom: 12px;">Click on markers to inspect cultural monuments, local artisan workshops, and nearby traditional sweetshops.</p>
+        <div id="map"></div>
+    </div>
+    
+    <!-- TAB 2: HISTORY & PAST VISUALIZER -->
+    <div id="historyTab" class="tab-content">
+        <h3>🏛️ Historical Depth & Past Reconstruction</h3>
+        <div class="grid-3" style="grid-template-columns: 1fr 1fr;">
+            <div class="card">
+                <h4>🏛️ Historical Timeline</h4>
+                <p id="historyText">Loading history...</p>
+            </div>
+            <div class="card visualizer">
+                <h4>🕰️ "How It Looked in the Past"</h4>
+                <p style="font-size: 12px; color: #64748B;">Drag slider to toggle between current ruins and AI historic reconstruction.</p>
+                <div class="image-container">
+                    <img id="visualImage" src="" alt="Historical Visualizer">
+                </div>
+                <input type="range" id="timeSlider" class="slider-control" min="0" max="100" value="0" oninput="togglePastView(this.value)">
+                <span id="sliderLabel" style="font-size: 12px; font-weight: bold; color: #0284C7;">Current Condition</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- TAB 3: AUDIO STORYTELLING ENGINE -->
+    <div id="audioTab" class="tab-content">
+        <h3>🗣️ Multi-lingual AI Narrative Engine</h3>
+        <div class="card" style="border-left-color: #D97706; margin-top: 15px;">
+            <h4 id="storyTitle">🎭 Local Legend & Folk Story</h4>
+            <p id="storyText" style="font-size: 15px; font-style: italic; margin-top: 8px;">Loading story...</p>
+            <button class="btn" onclick="playAudioStory()">🎧 Play Live Voice Story</button>
+            <button class="btn" style="background: #64748B;" onclick="stopAudioStory()">⏹️ Stop</button>
+        </div>
+    </div>
+    
+    <!-- TAB 4: ARTISANS, FOOD & ROUTES -->
+    <div id="cultureTab" class="tab-content">
+        <h3>🎨 Artisans, Food & Smart Route</h3>
+        <div class="grid-3">
+            <div class="card">
+                <h4>🍛 Traditional Food Nearby</h4>
+                <ul id="foodList" style="padding-left: 18px;"></ul>
+            </div>
+            <div class="card">
+                <h4>🎨 Local Handicrafts</h4>
+                <ul id="craftList" style="padding-left: 18px;"></ul>
+            </div>
+            <div class="card">
+                <h4>👨‍🎨 Featured Artisan</h4>
+                <p id="artisanName">Loading artisan...</p>
+                <button class="btn" onclick="alert('Connecting directly to artisan phone/UPI link...')">📞 Contact Artisan</button>
+            </div>
+        </div>
+        
+        <h4 style="margin-top: 25px; margin-bottom: 10px;">🧭 Suggested Cultural Route</h4>
+        <div class="route-step" id="routeText">Loading route...</div>
+    </div>
+</div>
+
+<!-- Leaflet JavaScript Map Library -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // Expanded Database for 5 Heritage Sites
+    const DATA = {
+        bishnupur: {
+            name: "Bishnupur Terracotta Temples",
+            lat: 23.0678, lon: 87.3163,
+            history: "Built in the 17th-18th century by the Malla Rulers. Famous for intricate terracotta tile art depicting Ramayana and Mahabharata epics.",
+            presentImg: "https://images.unsplash.com/photo-1609946727706-2187766b1d40?w=800",
+            pastImg: "https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?w=800",
+            stories: {
+                "en-US": "Legend has it that the Malla Kings built these terracotta shrines using local clay when stone was unavailable in the plains. The carved tiles tell sacred epic stories that come alive under the twilight sun.",
+                "bn-IN": "কিংবদন্তি অনুসারে, মল্ল রাজারা পাথরের অভাবে স্থানীয় মাটি দিয়ে এই টেরাকোটা মন্দিরগুলি তৈরি করেছিলেন। এই পোড়ামাটির ফলকগুলিতে রামায়ণ ও মহাভারতের অমর কাহিনী খোদাই করা আছে।",
+                "hi-IN": "पौराणिक कथाओं के अनुसार, मल्ल राजाओं ने बलुआ पत्थर की कमी के कारण स्थानीय मिट्टी से इन टेराकोटा मंदिरों का निर्माण कराया था। इन पर रामायण के चित्र उकेरे गए हैं।"
+            },
+            food: ["Mihidana & Sitabhog (Heritage Sweets)", "Posto Bora (Poppy Seed Fritters)"],
+            crafts: ["Baluchari Silk Sarees", "Bankura Terracotta Horses", "Dokra Metal Craft"],
+            artisan: "Shyamal Kumbhakar — Master Clay Artist (400m away)",
+            route: "1. 🏛️ Temple Entry ➔ 2. 👨‍🎨 Pottery Village Walk ➔ 3. 🍛 Sweetshop Tasting ➔ 4. 📍 Ancient Cannon Site"
+        },
+        hazarduari: {
+            name: "Hazarduari Palace",
+            lat: 24.1867, lon: 88.2686,
+            history: "Built in 1837 by Nawab Nazim Humayun Jah. It features 1,000 doors, of which 900 are false doors designed to confuse intruders.",
+            presentImg: "https://images.unsplash.com/photo-1596402184320-417e7178b2cd?w=800",
+            pastImg: "https://images.unsplash.com/photo-1596402184320-417e7178b2cd?w=800",
+            stories: {
+                "en-US": "In the grand halls of Murshidabad, the palace of a thousand doors hides secret staircases where royal guards once stood watch to trap rogue invaders.",
+                "bn-IN": "মুর্শিদাবাদের এই হাজারদুয়ারী প্রাসাদে ৯০০টি নকল দরজা রয়েছে। শত্রুদের বিভ্রান্ত করতে এবং প্রাসাদ রক্ষা করতে এই বিশেষ স্থাপত্য তৈরি করা হয়েছিল।",
+                "hi-IN": "हजारद्वारी पैलेस में 1000 दरवाजे हैं, जिनमें से 900 नकली हैं। यह वास्तुकला घुसपैठियों को भ्रमित करने के लिए बनाई गई थी।"
+            },
+            food: ["Murshidabadi Royal Biryani", "Chanabora (Fried Cottage Cheese Sweet)"],
+            crafts: ["Ivory & Wood Carvings", "Murshidabad Silk Sarees"],
+            artisan: "Amina Begum — Silk Weaving Master (800m away)",
+            route: "1. 🏛️ Palace Main Gate ➔ 2. 👨‍🎨 Silk Weaver Loom ➔ 3. 🍛 Royal Biryani Dining ➔ 4. 📍 Katra Mosque Ruins"
+        },
+        konark: {
+            name: "Konark Sun Temple, Odisha",
+            lat: 19.8876, lon: 86.0945,
+            history: "Constructed in the 13th century AD by King Narasimhadeva I. Shaped like a gigantic stone chariot with 24 carved wheels pulled by seven horses.",
+            presentImg: "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=800",
+            pastImg: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800",
+            stories: {
+                "en-US": "Designed as the celestial chariot of Surya, the Sun God. Its carved stone wheels act as precise sundials that accurately calculate time down to the minute.",
+                "bn-IN": "কোনার্কের সূর্য মন্দিরটি একটি বিশালাকার পাথরের রথের মতো তৈরি। এর চাকাগুলি আসলে প্রাচীন সূর্যঘড়ি, যা সঠিক সময় গণনা করতে পারে।",
+                "hi-IN": "कोणार्क सूर्य मंदिर भगवान सूर्य के एक विशाल पत्थर के रथ के रूप में निर्मित है। इसके नक्काशीदार पहिए आज भी सही समय बताते हैं।"
+            },
+            food: ["Abadha Mahaprasad", "Cuttack Dahibara Aloodum", "Khaja Sweet"],
+            crafts: ["Pattachitra Scroll Paintings", "Applique Work of Pipili", "Stone Carvings"],
+            artisan: "Ramesh Maharana — Pattachitra Master Painter (500m away)",
+            route: "1. 🏛️ Sun Temple Chariot Wheels ➔ 2. 👨‍🎨 Pattachitra Studio ➔ 3. 🍛 Local Khaja Stall ➔ 4. 📍 Chandrabhaga Beach Viewpoint"
+        },
+        darjeeling: {
+            name: "Darjeeling Himalayan Railway",
+            lat: 27.0360, lon: 88.2627,
+            history: "Built between 1879 and 1881, this UNESCO World Heritage narrow-gauge railway scales steep mountain slopes using ingenious loops and zig-zags.",
+            presentImg: "https://images.unsplash.com/photo-1544644181-1484b3fdfc62?w=800",
+            pastImg: "https://images.unsplash.com/photo-1532375810709-75b1da00537c?w=800",
+            stories: {
+                "en-US": "Chugging through mist and pine forests, the famous Toy Train conquered extreme Himalayan elevation without tunnels using unique steam locomotive engineering.",
+                "bn-IN": "কুয়াশাঘেরা পাহাড়ের মধ্য দিয়ে চলা এই ঐতিহ্যবাহী টয় ট্রেন অত্যন্ত বিখ্যাত। কোনও সুরঙ্গ ছাড়াই পাহাড়ি খাঁড়া ঢাল বেয়ে উঠে এই ট্রেন বিশ্ব ঐতিহ্য অর্জন করেছে।",
+                "hi-IN": "दार्जिलिंग की टॉय ट्रेन हिमालय की धुंध और देवदार के जंगलों से होकर गुजरती है। यह भाप इंजन इंजीनियरिंग का एक बेजोड़ नमूना है।"
+            },
+            food: ["Darjeeling First Flush Tea", "Steamed Tibetan Momos", "Thukpa Noodle Soup"],
+            crafts: ["Handwoven Tibetan Carpets", "Bhutanese Wooden Masks", "Pashmina Shawls"],
+            artisan: "Tenzing Norbu — Himalayan Carpet Artisan (300m away)",
+            route: "1. 🏛️ Steam Locomotive Shed ➔ 2. 👨‍🎨 Tibetan Craft Center ➔ 3. 🍛 Heritage Tea House ➔ 4. 📍 Batasia Loop Monument"
+        },
+        victoria: {
+            name: "Victoria Memorial, Kolkata",
+            lat: 22.5448, lon: 88.3426,
+            history: "Built between 1906 and 1921 using white Makrana marble. Blends Indo-Saracenic, Mughal, and classical European architectural styles.",
+            presentImg: "https://images.unsplash.com/photo-1558431382-27e303142255?w=800",
+            pastImg: "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800",
+            stories: {
+                "en-US": "Atop the central dome sits the bronze 'Angel of Victory', which rotates with strong wind currents overlooking the vast green expanses of Maidan.",
+                "bn-IN": "কলকাতার বুকে শ্বেতপাথরের তৈরি ভিক্টোরিয়া মেমোরিয়াল গম্বুজের ওপর ব্রোঞ্জের 'পরী' রয়েছে, যা বাতাসের গতিতে ঘোরে।",
+                "hi-IN": "सफेद मकराना संगमरमर से बनी यह इमारत कोलकाता का गौरव है। इसके केंद्रीय गुंबद के ऊपर बनी कांस्य की मूर्ति हवा के साथ घूमती है।"
+            },
+            food: ["Kolkata Kathi Rolls", "Phuchka (Spiced Water Pani Puri)", "Rosogolla"],
+            crafts: ["Kalighat Pat Paintings", "Clay Idols of Kumartuli", "Jute Craft Products"],
+            artisan: "Debasish Pal — Kalighat Folk Artist (1.2 km away)",
+            route: "1. 🏛️ Marble Gallery ➔ 2. 👨‍🎨 Kalighat Art Display ➔ 3. 🍛 Street Food Walk at Park Street ➔ 4. 📍 Princep Ghat Sunset View"
+        }
+    };
+
+    let map, marker, artisanMarker;
+
+    // Initialize Page
+    window.onload = function() {
+        initMap();
+        updateSiteData();
+    };
+
+    // Tab Switch Logic
+    function switchTab(evt, tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        evt.currentTarget.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+        if(tabId === 'mapTab') setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    // Initialize Map
+    function initMap() {
+        map = L.map('map').setView([23.0678, 87.3163], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        marker = L.marker([23.0678, 87.3163]).addTo(map).bindPopup("🏛️ Heritage Site");
+        artisanMarker = L.marker([23.0708, 87.3193]).addTo(map).bindPopup("👨‍🎨 Artisan Studio");
+    }
+
+    // Update Dashboard Information
+    function updateSiteData() {
+        const siteKey = document.getElementById('siteSelect').value;
+        const langKey = document.getElementById('langSelect').value;
+        const site = DATA[siteKey];
+
+        // Map Update
+        map.setView([site.lat, site.lon], 14);
+        marker.setLatLng([site.lat, site.lon]).bindPopup(`🏛️ ${site.name}`).openPopup();
+        artisanMarker.setLatLng([site.lat + 0.003, site.lon + 0.003]).bindPopup(`👨‍🎨 ${site.artisan}`);
+
+        // History Update
+        document.getElementById('historyText').innerText = site.history;
+        document.getElementById('visualImage').src = site.presentImg;
+        document.getElementById('timeSlider').value = 0;
+        document.getElementById('sliderLabel').innerText = "Current Condition";
+
+        // Story Update
+        document.getElementById('storyText').innerText = `"${site.stories[langKey]}"`;
+
+        // Culture & Food Update
+        document.getElementById('foodList').innerHTML = site.food.map(f => `<li>${f}</li>`).join('');
+        document.getElementById('craftList').innerHTML = site.crafts.map(c => `<li>${c}</li>`).join('');
+        document.getElementById('artisanName').innerText = site.artisan;
+        document.getElementById('routeText').innerText = site.route;
+    }
+
+    // Past vs Present Slider Logic
+    function togglePastView(val) {
+        const siteKey = document.getElementById('siteSelect').value;
+        const site = DATA[siteKey];
+        if (val > 50) {
+            document.getElementById('visualImage').src = site.pastImg;
+            document.getElementById('sliderLabel').innerText = "🎨 AI Historic Reconstruction View";
+        } else {
+            document.getElementById('visualImage').src = site.presentImg;
+            document.getElementById('sliderLabel').innerText = "📷 Current Condition";
+        }
+    }
+
+    // Speech Synthesis (Audio Story Engine)
+    function playAudioStory() {
+        window.speechSynthesis.cancel(); // Stop any existing speech
+        const text = document.getElementById('storyText').innerText;
+        const lang = document.getElementById('langSelect').value;
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        utterance.rate = 0.9; // Slightly slower for clear storytelling
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function stopAudioStory() {
+        window.speechSynthesis.cancel();
+    }
+</script>
+
+</body>
+</html>
+            
